@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Document</title>
+  <style type="text/css">
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    .img-preview {
+      width: 1000px;
+      margin: 0 auto;
+    }
+
+    .img-row {
+      margin-bottom: 20px;
+    }
+
+    .img-row img {
+      float:left;
+    }
+
+    .img-row:after {
+      content: '';
+      display: block;
+      clear: both;
+    }
+  </style>
+</head>
+<body>
+  <div class="img-preview"></div>
+
+  <script src="./jquery-3.2.1.min.js" crossorigin="anonymous"></script>
+
+  <script type="text/javascript">
+    
+    class Barrels {
+      constructor(ct) {
+        this.ct = ct
+        this.rowList = []
+        this.rowWidth = 0
+        this.maxWidth = $('.img-preview').width()
+        this.baseHeight = 150;
+        this.loadImgs()
+      }
+      
+      getImgUrls(num) {
+        let width, height, color, url, urls = [];
+        for (let i = 0; i < num; i++) {
+          width = Math.floor(Math.random() * 100 + 50);
+          height = Math.floor(Math.random() * 30 + 50);
+          color = Math.random().toString(16).substring(2,8);
+          urls.push(`http://placehold.it/${width}x${height}/${color}/fff`) 
+        }
+        return urls
+      }
+
+      loadImgs() {
+        let self = this
+        let imgUrls = this.getImgUrls(50)
+        $.each(imgUrls, function(idx,url) {
+          let img = new Image();
+          img.src = url;
+          img.onload = function() {
+            self.render(img)
+          }
+        }) 
+      }
+
+      render(img){
+        img.width = img.width*this.baseHeight/img.height
+        img.height = this.baseHeight
+        this.rowList.push(img)
+        this.rowWidth += img.width
+        if (this.rowWidth > this.maxWidth) {
+          this.rowWidth -= img.width
+          this.rowList.pop()
+          this.layoutNewRow(this.rowList)
+          this.rowList = [img]
+          this.rowWidth = img.width
+        }
+      }
+
+      layoutNewRow(imgs) { 
+        let ratio = this.maxWidth/this.rowWidth
+        let newRow = $('<div class="img-row"></div>')
+        this.ct.append(newRow)
+        imgs.forEach(function(img){
+          img.width *= ratio
+          img.height *= ratio
+          newRow.append(img)
+        })
+      }
+    }
+
+    let barrels = new Barrels($('.img-preview'))
+</script>
+
+</body>
+</html>
