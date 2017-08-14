@@ -23,10 +23,12 @@
       /* border: 1px solid red; */
     }
 
-    .img-row img {
-      float:left;
-      margin: 20px;
-      /* margin: 20px; */
+    .img-row .figure {
+      float: left;
+    }
+    .img-row .figure img {
+      width: 100%;
+      height: 100%;
     }
 
     .img-row:after {
@@ -161,66 +163,82 @@
 
   new LoadModule()
 
-  // class Barrels {
-  //   constructor(ct) {
-  //     this.ct = ct
-  //     this.rowList = []
-  //     this.rowWidth = 0
-  //     this.maxWidth = $('.img-preview').width()
-  //     this.baseHeight = 150;
-  //     this.loadImgs()
-  //   }
+  class Barrels {
+    constructor() {
+      this.ct = $('.img-preview')
+      this.rowList = []
+      this.rowWidth = 0
+      this.maxWidth = $('.img-preview').width()
+      this.baseHeight = 150;
+      this.bind()
+    }
     
-  //   getImgUrls(num) {
-  //     let width, height, color, url, urls = [];
-  //     for (let i = 0; i < num; i++) {
-  //       width = Math.floor(Math.random() * 100 + 50);
-  //       height = Math.floor(Math.random() * 30 + 50);
-  //       color = Math.random().toString(16).substring(2,8);
-  //       urls.push(`http://placehold.it/${width}x${height}/${color}/fff`) 
-  //     }
-  //     return urls
-  //   }
+    bind() {
+      Event.on('load_first', e => {
+        this.render(e.detail.hits)
+      })
 
-  //   loadImgs() {
-  //     let self = this
-  //     let imgUrls = this.getImgUrls(50)
-  //     $.each(imgUrls, function(idx,url) {
-  //       let img = new Image();
-  //       img.src = url;
-  //       img.onload = function() {
-  //         self.render(img)
-  //       }
-  //     }) 
-  //   }
+      Event.on('load_over', e => {console.log(e.detail)})
+      Event.on('load_more', e => {console.log(e.detail)})
+            
+    }
 
-  //   render(img){
-  //     img.width = img.width*this.baseHeight/img.height
-  //     img.height = this.baseHeight
-  //     this.rowList.push(img)
-  //     this.rowWidth += img.width
-  //     if (this.rowWidth > this.maxWidth) {
-  //       this.rowWidth -= img.width
-  //       this.rowList.pop()
-  //       this.layoutNewRow(this.rowList)
-  //       this.rowList = [img]
-  //       this.rowWidth = img.width
-  //     }
-  //   }
+    render(imgsInfo){
+      if (!imgsInfo) return
+      let cnt = 0;
+      console.log(imgsInfo)
+      for (let imgInfo of imgsInfo) {
+        
+        // console.log('------------')
+        // console.log(imgInfo)
+        
+        imgInfo.webformatWidth = imgInfo.webformatWidth*this.baseHeight/imgInfo.webformatHeight
+        imgInfo.webformatHeight = this.baseHeight
+        // console.log(imgInfo)
+        
+        this.rowList.push(imgInfo)
+        
+        
+        this.rowWidth += imgInfo.webformatWidth
+        if (this.rowWidth > this.maxWidth) {
+          this.rowWidth -= imgInfo.webformatWidth
+          this.rowList.pop()
+          this.layoutNewRow(this.rowList, true)
+          this.rowList = [imgInfo]
+          this.rowWidth = imgInfo.webformatWidth
+        }
+        cnt++
+        console.log(cnt,imgsInfo.length)
+        if (cnt >= imgsInfo.length) {//the last one
+          this.layoutNewRow(this.rowList, false)
+          this.rowList = []
+        }
+      }
+    }
 
-  //   layoutNewRow(imgs) { 
-  //     let ratio = this.maxWidth/this.rowWidth
-  //     let newRow = $('<div class="img-row"></div>')
-  //     this.ct.append(newRow)
-  //     imgs.forEach(function(img){
-  //       img.width *= ratio
-  //       img.height *= ratio
-  //       newRow.append(img)
-  //     })
-  //   }
-  // }
+    layoutNewRow(imgsInfo, full) {
+       
+      // console.log('++++++++++++++++')
+      // console.log(imgsInfo)
+      let ratio = this.maxWidth/this.rowWidth
+      if (!full) ratio = 1
+      let newRow = $('<div class="img-row"></div>')
+      this.ct.append(newRow)
 
-  //   let barrels = new Barrels($('.img-preview'))
+      for (let imgInfo of imgsInfo) {
+        let newFigure = $('<div class="figure"></div>')
+        let img = new Image()
+        
+        newRow.append(newFigure)
+        newFigure.width(imgInfo.webformatWidth * ratio)
+        newFigure.height(imgInfo.webformatHeight * ratio)
+        newFigure.append(img)
+        img.src = imgInfo.webformatURL
+      }
+    }
+  }
+
+    let barrels = new Barrels()
 
 
 
