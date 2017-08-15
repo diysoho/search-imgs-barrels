@@ -12,19 +12,20 @@
     }
 
     .img-preview {
-      width: 1000px;
+      width: 1200px;
       margin: 0 auto;
 
-      /* border: 1px solid red; */
+       /* border: 1px solid red;  */
     }
 
     .img-row {
-       margin-bottom: 20px; 
-      /* border: 1px solid red; */
+       /* border: 1px solid red;  */
     }
 
     .img-row .figure {
       float: left;
+      /* padding: 20px; */
+      /* border: 1px solid red; */
     }
     .img-row .figure img {
       width: 100%;
@@ -41,6 +42,7 @@
 <body>
   <input id="search-input" type="text" placeholder="enter picture name for search">
   <div class="img-preview"></div>
+  <button class="load_more">load_more</button>
 
   <script src="./jquery-3.2.1.min.js" crossorigin="anonymous"></script>
 
@@ -55,9 +57,6 @@
     }
   }
 
-  // Event.on('search', e=>console.log(e.detail))
-  // Event.trigger('search', 'start to search')
-
   let test = null
   class InputModule {
     constructor() {
@@ -68,7 +67,7 @@
     bind() {
       this.input.oninput = this.throttle(() => {
         Event.trigger('search',this.input.value)
-      },500)
+      },600)
 
       document.body.onresize = this.throttle(() => {
         console.log('resize')
@@ -80,6 +79,13 @@
           console.log('bottom')
           Event.trigger('bottom')
         }
+      },300)
+
+      $('.load_more')[0].onclick = this.throttle(() => {
+       
+        console.log('bottom')
+        Event.trigger('bottom')
+        
       },300)
     }
 
@@ -104,6 +110,7 @@
       this.per_page = 10
       this.keyword = ''
       this.url = '//pixabay.com/api/'
+      this.totalHits = 0
       this.bind()
     }
 
@@ -114,7 +121,7 @@
         this.loadData()
           .then(response =>{
             console.log(response)
-            response.totalHits = response.totalHits
+            this.totalHits = response.totalHits
             Event.trigger('load_first', response)
           })
           .catch(error => console.log(error))
@@ -123,12 +130,13 @@
       Event.on('bottom', e => {
         if (this.loading) return
         if (this.page * this.per_page >= this.totalHits) {
-          Event.trigger('load_over')
+          return
         }
 
         this.page++
         this.loadData()
           .then(response =>{
+            console.log(response)
             Event.trigger('load_more',response)
           })
           .catch(error => console.log(error))
@@ -168,82 +176,106 @@
       this.ct = $('.img-preview')
       this.rowList = []
       this.rowWidth = 0
-      this.maxWidth = $('.img-preview').width()
-      this.baseHeight = 150;
+      this.maxWidth = $('.img-preview').width()// - 3 //防止按比例缩放出现小数，越过边界
+      this.baseHeight = 200;
+      this.allImgsInfo = []
       this.bind()
     }
     
     bind() {
       Event.on('load_first', e => {
+        this.ct.html('') //清空
+        this.rowList = []
+        this.rowWidth = 0
+        this.allImgsInfo = e.detail.hits
+        this.render(e.detail.hits)
+      })
+
+      Event.on('load_more', e => {
+        this.allImgsInfo.push(...e.detail.hits) //展开运算符
         this.render(e.detail.hits)
       })
 
       Event.on('load_over', e => {console.log(e.detail)})
-      Event.on('load_more', e => {console.log(e.detail)})
-            
+      Event.on('resize', e => {
+        // this.ct.html('') //清空
+        // this.render(this.allImgsInfo)//重新全绘
+      })    
     }
 
-    render(imgsInfo){
+    render(imgsInfo) {
       if (!imgsInfo) return
       let cnt = 0;
-      console.log(imgsInfo)
+
       for (let imgInfo of imgsInfo) {
-        
-        // console.log('------------')
-        // console.log(imgInfo)
-        
+        console.log(imgInfo)
         imgInfo.webformatWidth = imgInfo.webformatWidth*this.baseHeight/imgInfo.webformatHeight
-        imgInfo.webformatHeight = this.baseHeight
-        // console.log(imgInfo)
-        
         this.rowList.push(imgInfo)
-        
-        
         this.rowWidth += imgInfo.webformatWidth
         if (this.rowWidth > this.maxWidth) {
           this.rowWidth -= imgInfo.webformatWidth
           this.rowList.pop()
-          this.layoutNewRow(this.rowList, true)
+          this.layoutRow(this.rowList, true)
+         
           this.rowList = [imgInfo]
           this.rowWidth = imgInfo.webformatWidth
         }
+
         cnt++
-        console.log(cnt,imgsInfo.length)
-        if (cnt >= imgsInfo.length) {//the last one
-          this.layoutNewRow(this.rowList, false)
-          this.rowList = []
+        console.log(cnt,this.rowList)
+        if (cnt >= imgsInfo.length) {//最后撑不满一行宽度的图片
+          if (this.rowList.length) {
+            this.layoutRow(this.rowList, false)
+            this.rowList = [] //列表清空防止重绘，宽度不清空，给下次计算用
+          }
         }
       }
     }
 
-    layoutNewRow(imgsInfo, full) {
-       
-      // console.log('++++++++++++++++')
-      // console.log(imgsInfo)
+    layoutRow(imgsInfo, isfull) {
+      
       let ratio = this.maxWidth/this.rowWidth
-      if (!full) ratio = 1
-      let newRow = $('<div class="img-row"></div>')
-      this.ct.append(newRow)
+      console.log(this.rowWidth,isfull)
+      //两个需要考虑的问题：1.首屏第一行 2.每次最后一行与下次首行的衔接
+      let row = $('.img-row.notfull').last()
+      if (!row.length) {
+        console.log('create new row')
+        row = $('<div class="img-row"></div>')
+        this.ct.append(row)
+      } else {
+        console.log('get notfull row')
+        if (isfull) { //后面补充的把前面没有充满的行充满了，前面需要重新微调
+          row.children('.figure').each(function(index, oldFigure) {
+            let $oldFigure = $(oldFigure)
+            let width = $oldFigure.width()
+            let height = $oldFigure.height()
+            $oldFigure.width(width*ratio)
+            $oldFigure.height(height * ratio)
+          })
+        }
+      }
 
-      for (let imgInfo of imgsInfo) {
+      if (!isfull) {
+        row.addClass('notfull')
+        ratio = 1
+      }  else {
+        row.removeClass('notfull')
+        row.addClass('full')
+      }
+
+      for (let imgInfo of imgsInfo) { //新建数据，微调宽高
         let newFigure = $('<div class="figure"></div>')
         let img = new Image()
-        
-        newRow.append(newFigure)
-        newFigure.width(imgInfo.webformatWidth * ratio)
-        newFigure.height(imgInfo.webformatHeight * ratio)
+        row.append(newFigure)
+        newFigure.width(imgInfo.webformatWidth * ratio) 
+        newFigure.height(this.baseHeight * ratio) 
         newFigure.append(img)
         img.src = imgInfo.webformatURL
       }
     }
   }
 
-    let barrels = new Barrels()
-
-
-
-
-
+  let barrels = new Barrels()
 
 </script>
 
