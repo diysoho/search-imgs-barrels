@@ -28,7 +28,7 @@
 
     .img-row .figure {
       float: left;
-       padding: 5px 5px;  
+      padding: 5px 5px;  
     }
 
     .img-row .figure img {
@@ -51,13 +51,11 @@
       height: 30px;
       line-height: 30px;
     }
-
   </style>
 </head>
 <body>
   <input id="search-input" type="text" placeholder="请输入关键字搜索图片,英文搜索效果更佳">
   <div class="img-preview"></div>
-  <!-- <button class="load_more">load_more</button> -->
 
   <script src="./jquery-3.2.1.min.js" crossorigin="anonymous"></script>
 
@@ -106,7 +104,7 @@
     }
 
     isBottom() {
-      return (document.body.scrollHeight - document.body.scrollTop - document.documentElement.clientHeight < 20)
+      return (document.body.scrollHeight - document.body.scrollTop - document.documentElement.clientHeight < 300)
     }
   }
 
@@ -115,7 +113,7 @@
   class LoadModule {
     constructor() {
       this.page = 1
-      this.per_page = 20
+      this.per_page = 30
       this.keyword = ''
       this.url = '//pixabay.com/api/'
       this.totalHits = 0
@@ -218,7 +216,7 @@
       let cnt = 0;
 
       for (let imgInfo of imgsInfo) {
-        //console.log(imgInfo)
+        console.log(imgInfo)
         imgInfo.webformatWidth = imgInfo.webformatWidth*this.baseHeight/imgInfo.webformatHeight
         this.rowList.push(imgInfo)
         this.rowWidth += imgInfo.webformatWidth
@@ -273,11 +271,16 @@
 
       for (let imgInfo of imgsInfo) { //新建数据，微调宽高
         let newFigure = $('<div class="figure"></div>')
+        let alink = $('<a target="_blank"></a>')
         let img = new Image()
-        row.append(newFigure)
+
         newFigure.outerWidth(imgInfo.webformatWidth * ratio) 
-        newFigure.outerHeight(this.baseHeight * ratio) 
-        newFigure.append(img)
+        newFigure.outerHeight(this.baseHeight * ratio)
+        alink.attr("href",imgInfo.pageURL)
+
+        row.append(newFigure) 
+        alink.append(img)
+        newFigure.append(alink)
         img.src = imgInfo.webformatURL
       }
     }
@@ -289,7 +292,7 @@
     constructor() {
       this.gotop = $('<div class="gotop">回顶部</div>')
       this.gotop.css({'position':'fixed'});
-      this.gotop.css({'right':'5px'})
+      this.gotop.css({'right':($(window).width() - $('.img-preview').width())/10})
       this.gotop.css({'bottom':$(window).height()/10})
       $('body').append(this.gotop) 
       this.gotop.click(() => {
